@@ -103,6 +103,8 @@ Re-running normally re-pays for every agent. `resumeFromRunId` avoids that:
 
 Every run journals each settled `agent()` call beside its script as `<run id>.workflow.jsonl`, and the resume replays the **unchanged prefix** of that journal. It is a prefix and not a lookup table on purpose: a later call that still matches came from a run whose earlier stages no longer exist, so its recorded answer was produced downstream of work that has changed. A gated call's entry also records the gate's outcome: whether it passed, the tail of its output, and the directory the command ran in.
 
+Each new journal entry also records the script's `meta.name` as `workflow`, an ISO settlement timestamp as `at`, and the call's `label`, `agentType` and `model` when supplied. `model` is the requested string, not the resolved model id. Nested calls name their own script. Failed, skipped and replayed calls carry the same metadata, with timestamps from the current run. Replay matching still uses only the existing position, key and success checks; older entries without metadata remain readable.
+
 Four things it will not do:
 
 - **Cross sessions.** The journal is keyed to the session that wrote it. Restart pi and the run id is dead — you get `No workflow run "<id>" in this session.`

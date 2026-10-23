@@ -57,6 +57,16 @@ export interface WorkflowJournalEntry {
   ok: boolean;
   /** The agent's answer, when it had one. */
   text?: string;
+  /** The call's explicit label, when supplied. */
+  label?: string;
+  /** The requested agent type, when supplied. */
+  agentType?: string;
+  /** The script's `meta.name`. Absent in journals written before metadata was recorded. */
+  workflow?: string;
+  /** ISO timestamp when this call settled. Absent in older journals. */
+  at?: string;
+  /** The model as passed to `agent()`, not its resolved model id. */
+  model?: string;
   /**
    * Whether the call continued an earlier child (`agent({ resume })`).
    *

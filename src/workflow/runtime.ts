@@ -379,6 +379,16 @@ export async function runWorkflow(options: RunWorkflowOptions): Promise<Workflow
         ...payload,
         schema: payload.schema !== undefined ? JSON.stringify(payload.schema) : undefined,
       };
+      // Metadata describes this call, not the cached result's original run.
+      // Stamp here on settlement, including failures, skips and replayed calls.
+      const recordCall = (entry: WorkflowJournalEntry) => recordJournal?.({
+        ...entry,
+        ...(payload.label !== undefined ? { label: payload.label } : {}),
+        ...(payload.agentType !== undefined ? { agentType: payload.agentType } : {}),
+        workflow: payload.workflow ?? meta.name,
+        at: new Date().toISOString(),
+        ...(payload.model !== undefined ? { model: payload.model } : {}),
+      });
       let replayed = replayAt(index, journalKey(keyInput));
       // A replayed answer still has to satisfy the schema. The key covers a
       // schema that *changed*, but not a journal that was hand-edited, and not
@@ -416,7 +426,7 @@ export async function runWorkflow(options: RunWorkflowOptions): Promise<Workflow
         // earlier files to find the prefix. The gate outcome travels with it —
         // the command is not re-run, but the verdict is still the audit trail
         // for the answer being handed back.
-        recordJournal?.({
+        recordCall({
           index,
           key: replayed.key,
           ok: true,
@@ -432,7 +442,7 @@ export async function runWorkflow(options: RunWorkflowOptions): Promise<Workflow
 
       /** A skip the user asked for, before the child ever started. */
       const settleSkipped = (extra: Partial<WorkflowAgentEntry>) => {
-        recordJournal?.({ index, key, ok: false, ...resumeMark });
+        recordCall({ index, key, ok: false, ...resumeMark });
         emit([{ ...base, queuedAt, ...extra, state: "error", skipped: true, error: "Skipped by user." }]);
         // `null`, exactly as a terminal failure gives — a skipped agent is one
         // the script's `.filter(Boolean)` was already written to survive.
@@ -609,7 +619,7 @@ export async function runWorkflow(options: RunWorkflowOptions): Promise<Workflow
           if (result.ok) {
             const text = result.text ?? "";
             emit([{ ...common, state: "done", resultPreview: preview(text) }]);
-            recordJournal?.({
+            recordCall({
               index,
               key,
               ok: true,
@@ -625,7 +635,7 @@ export async function runWorkflow(options: RunWorkflowOptions): Promise<Workflow
           // whole mechanism exists to make cheap. A failed gate is recorded with
           // its output and the directory it ran in, so an entry that reads `ok:
           // false` can be told from a child that simply failed.
-          recordJournal?.({
+          recordCall({
             index,
             key,
             ok: false,

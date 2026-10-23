@@ -92,6 +92,24 @@ describe("journal files", () => {
     ]);
   });
 
+  it("still reads old-format lines without descriptive metadata", () => {
+    const path = join(dir, "old.jsonl");
+    writeFileSync(path, '{"index":0,"key":"old","ok":true,"text":"kept","resumed":true}\n', "utf-8");
+
+    expect(readJournal(path)).toEqual([{ index: 0, key: "old", ok: true, text: "kept", resumed: true }]);
+  });
+
+  it("accepts descriptive metadata and ignores unknown fields when parsing", () => {
+    const path = join(dir, "metadata.jsonl");
+    const entry = {
+      index: 0, key: "k", ok: true, text: "answer", label: "audit", agentType: "Explore",
+      workflow: "probe", model: "haiku", at: "2026-10-10T12:00:00.000Z", futureField: { ignored: true },
+    };
+    appendJournal(path, entry);
+
+    expect(readJournal(path)).toEqual([entry]);
+  });
+
   it("treats a missing journal as nothing to replay", () => {
     expect(readJournal(join(dir, "nope.jsonl"))).toEqual([]);
   });
@@ -159,6 +177,8 @@ describe("gate outcomes in the journal", () => {
         key: journalKey({ prompt: "fix it", gate: "npm test" }),
         ok: true,
         text: "fixed",
+        workflow: "probe",
+        at: expect.any(String),
         gate: { ok: true, output: "3 passing", cwd: "/repo/.git/worktrees/wf-agent-0" },
       },
     ]);
@@ -176,6 +196,8 @@ describe("gate outcomes in the journal", () => {
         index: 0,
         key: journalKey({ prompt: "fix it", gate: "npm test" }),
         ok: false,
+        workflow: "probe",
+        at: expect.any(String),
         gate: { ok: false, output: "FAIL src/auth.test.ts\n1 failing", cwd: "/repo" },
       },
     ]);
@@ -216,7 +238,7 @@ describe("gate outcomes in the journal", () => {
     });
 
     expect(result.value).toBe("from the journal");
-    expect(second.entries).toEqual([first]);
+    expect(second.entries).toEqual([{ ...first, workflow: "probe", at: expect.any(String) }]);
   });
 });
 
@@ -233,9 +255,89 @@ describe("replay", () => {
     expect(journal.entries).toEqual([
       // Keyed on what the script asked for, not on what the runtime derived —
       // the label here was derived from the prompt, so it is not part of it.
-      { index: 0, key: journalKey({ prompt: "first" }), ok: true, text: "live:first" },
-      { index: 1, key: journalKey({ prompt: "second" }), ok: true, text: "live:second" },
+      { index: 0, key: journalKey({ prompt: "first" }), ok: true, text: "live:first", workflow: "probe", at: expect.any(String) },
+      { index: 1, key: journalKey({ prompt: "second" }), ok: true, text: "live:second", workflow: "probe", at: expect.any(String) },
     ]);
+  });
+
+  it.each([true, false])("records requested metadata when a call settles with ok=%s", async ok => {
+    const journal = recorder();
+    let settledAt = 0;
+    const { host } = stubHost(request => {
+      request.onResolved?.({ modelName: "resolved-model", modelId: "provider/resolved-model" });
+      settledAt = Date.now();
+      return ok ? { ok: true, text: "answer" } : { ok: false, error: "failed" };
+    });
+    const payload = { prompt: "audit", label: "audit:src", agentType: "Explore", model: "haiku" };
+
+    const result = await run('return await agent("audit", { label: "audit:src", agentType: "Explore", model: "haiku" });', { host, journal });
+
+    expect(result.status).toBe("completed");
+    expect(journal.entries).toEqual([{
+      index: 0, key: journalKey(payload), ok, ...(ok ? { text: "answer" } : {}),
+      label: "audit:src", agentType: "Explore", model: "haiku", workflow: "probe", at: expect.any(String),
+    }]);
+    const at = journal.entries[0].at ?? "";
+    expect(new Date(at).toISOString()).toBe(at);
+    expect(Date.parse(at)).toBeGreaterThanOrEqual(settledAt);
+    expect(Date.parse(at)).toBeLessThanOrEqual(Date.now());
+  });
+
+  it("attributes nested calls to their own script", async () => {
+    const journal = recorder();
+    const host = {
+      ...stubHost().host,
+      loadWorkflow: () => ({ ok: true as const, script: 'export const meta = { name: "child", description: "child" }; return await agent("nested");' }),
+    };
+
+    const result = await run('await workflow("child"); return await agent("root");', { host, journal });
+
+    expect(result.status).toBe("completed");
+    expect(journal.entries.map(entry => entry.workflow)).toEqual(["child", "probe"]);
+  });
+
+  it("records metadata for a call skipped before spawning", async () => {
+    const journal = recorder();
+    const stub = stubHost();
+    let skip = (_index: number) => false;
+
+    const result = await runWorkflow({
+      script: HEAD + 'return await agent("skip", { label: "skip-me", model: "haiku", agentType: "Explore" });',
+      host: stub.host,
+      journal,
+      onControl(control) { control.pause(); skip = control.skip; },
+      onProgress(entries) {
+        for (const entry of entries) {
+          if (entry.type === "workflow_agent" && entry.state === "start") {
+            queueMicrotask(() => skip(entry.index));
+          }
+        }
+      },
+    });
+
+    expect(result.status).toBe("completed");
+    expect(result.value).toBeNull();
+    expect(stub.calls).toHaveLength(0);
+    expect(journal.entries).toEqual([{
+      index: 0, key: journalKey({ prompt: "skip", label: "skip-me", model: "haiku", agentType: "Explore" }),
+      ok: false, label: "skip-me", model: "haiku", agentType: "Explore", workflow: "probe", at: expect.any(String),
+    }]);
+  });
+
+  it("adds current metadata when replaying an old-format entry", async () => {
+    const journal = recorder();
+    const stub = stubHost();
+    const result = await runWorkflow({
+      script: 'export const meta = { name: "renamed", description: "new name" }; return await agent("old");',
+      host: stub.host,
+      journal: { entries: [{ index: 0, key: journalKey({ prompt: "old" }), ok: true, text: "cached" }], append: journal.append },
+    });
+
+    expect(result.replayedCount).toBe(1);
+    expect(stub.calls).toHaveLength(0);
+    expect(journal.entries).toEqual([{
+      index: 0, key: journalKey({ prompt: "old" }), ok: true, text: "cached", workflow: "renamed", at: expect.any(String),
+    }]);
   });
 
   it("replays an identical run without spawning anything", async () => {
@@ -286,7 +388,7 @@ describe("replay", () => {
     const failing = stubHost(() => (attempt++ === 1 ? { ok: false, error: "boom" } : { ok: true, text: "fine" }));
     await run(twoAgents, { host: failing.host, journal: first });
 
-    expect(first.entries[1]).toEqual({ index: 1, key: first.entries[1].key, ok: false });
+    expect(first.entries[1]).toEqual({ index: 1, key: first.entries[1].key, ok: false, workflow: "probe", at: expect.any(String) });
 
     const second = stubHost(() => ({ ok: true, text: "retried" }));
     const result = await run(twoAgents, { host: second.host, journal: { entries: first.entries } });
@@ -303,7 +405,12 @@ describe("replay", () => {
     const second = recorder();
     await run(twoAgents, { host: stubHost().host, journal: { entries: first.entries, append: second.append } });
 
-    expect(second.entries).toEqual(first.entries);
+    expect(second.entries.map(({ at: _at, ...entry }) => entry)).toEqual(
+      first.entries.map(({ at: _at, ...entry }) => entry),
+    );
+    for (const entry of second.entries) {
+      expect(new Date(entry.at ?? "").toISOString()).toBe(entry.at);
+    }
   });
 
   it("runs everything live when there is no journal", async () => {
