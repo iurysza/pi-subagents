@@ -24,10 +24,16 @@
  * far. Ported from Claude Code, including the CJK sentence-ending punctuation
  * it accepts as a boundary.
  */
-export const MENTION_TRIGGER = /(^|[\s。、？！])@([\w-]*)$/;
+export const MENTION_TRIGGER = /(^|[\s。、？！])#([\w-]*)$/;
+
+/**
+ * Fork change: agents use `#`, not `@`, so pi keeps `@` for file attachments
+ * and the two pickers never mix.
+ */
+export const MENTION_SIGIL = "#";
 
 /** Send grammar: leading `@handle`, then a non-empty message. */
-const MENTION_SEND = /^@([\w-]+)\s+([\s\S]+)$/;
+const MENTION_SEND = /^#([\w-]+)\s+([\s\S]+)$/;
 
 /**
  * Upper bound on a handle, matching Claude Code's `dSS`. Nothing here generates

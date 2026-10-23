@@ -252,7 +252,7 @@ describe("cloning the conversation", () => {
     // not: it sets an EMPTY allowlist, which strips the custom tool from the
     // registry too (agent-session.js `isAllowedTool`). The clone then has
     // nothing to call, every mention falls through to the direct start, and the
-    // user sees "Started @x directly — the conversation clone did not start it"
+    // user sees "Started #x directly — the conversation clone did not start it"
     // on every single one. Naming the tool is what makes it reachable.
     cloneSession(callsAgent());
 

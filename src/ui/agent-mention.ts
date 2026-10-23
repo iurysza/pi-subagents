@@ -44,7 +44,7 @@
 
 import type { AutocompleteItem, AutocompleteProvider, AutocompleteSuggestions } from "@earendil-works/pi-tui";
 import type { AgentManager } from "../agent-manager.js";
-import { handleBase, MENTION_TRIGGER } from "../mention.js";
+import { handleBase, MENTION_SIGIL, MENTION_TRIGGER } from "../mention.js";
 import type { AgentRecord, AgentTombstone } from "../types.js";
 
 /**
@@ -128,7 +128,7 @@ export function createMentionProvider(
     // THIS provider", and pi unions each wrapper's own set onto the outermost
     // one itself (interactive-mode.js:432), so re-declaring the wrapped
     // provider's characters here would both misreport us and duplicate that.
-    triggerCharacters: ["@"],
+    triggerCharacters: [MENTION_SIGIL],
 
     async getSuggestions(lines, cursorLine, cursorCol, options): Promise<AutocompleteSuggestions | null> {
       const mine = isEnabled() ? mentionItems(roster(), lines[cursorLine] ?? "", cursorCol) : null;
@@ -169,6 +169,16 @@ export function createMentionProvider(
     },
 
     applyCompletion(lines, cursorLine, cursorCol, item, prefix) {
+      // Pi has no `#` branch, so its fallback would insert the handle with no
+      // trailing space. Insert it ourselves, ready for the message.
+      if (prefix.startsWith(MENTION_SIGIL) && item.value.startsWith(MENTION_SIGIL)) {
+        const line = lines[cursorLine] ?? "";
+        const before = line.slice(0, cursorCol - prefix.length);
+        const after = line.slice(cursorCol).replace(/^ /, "");
+        const next = [...lines];
+        next[cursorLine] = `${before}${item.value} ${after}`;
+        return { lines: next, cursorLine, cursorCol: before.length + item.value.length + 1 };
+      }
       return current.applyCompletion(lines, cursorLine, cursorCol, item, prefix);
     },
 
@@ -187,9 +197,9 @@ function mentionItems(roster: MentionTarget[], line: string, cursorCol: number):
   const items: AutocompleteItem[] = [];
   for (const target of roster) {
     if (!target.handle.toLowerCase().startsWith(typed)) continue;
-    items.push({ value: `@${target.handle}`, label: `@${target.handle}`, description: describeTarget(target) });
+    items.push({ value: `${MENTION_SIGIL}${target.handle}`, label: `${MENTION_SIGIL}${target.handle}`, description: describeTarget(target) });
   }
-  return items.length > 0 ? { items, prefix: `@${match[2]}` } : null;
+  return items.length > 0 ? { items, prefix: `${MENTION_SIGIL}${match[2]}` } : null;
 }
 
 /** Name the action that will actually happen, so the list never mispromises. */
