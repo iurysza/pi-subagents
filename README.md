@@ -207,6 +207,8 @@ Running [workflows](#subagentworkflow) appear as a single `workflow` row above t
 
 ### Agent mentions
 
+In Iury's fork, prompt mentions and their picker use `#`, not `@`: type `#explore check this` or `#` to pick an agent. Completion adds a trailing space for the message. `@` remains pi's file picker. Read the upstream prompt examples below with `#` in place of `@`; `/agents` command syntax is unchanged.
+
 Subagents are addressable. Every agent has a typeable handle — the agent type, lowercased, numbered when instances collide (`explore`, `explore-2`) — and `@handle <message>` at the prompt talks to that agent, whatever state it happens to be in. Type `@` to pick one:
 
 ```

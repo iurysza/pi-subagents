@@ -65,7 +65,7 @@ export function buildAgentToolParams(schedulingEnabled: boolean, worktreeIsolati
     name: Type.Optional(
       Type.String({
         description:
-          'Optional memorable name for this agent, e.g. "auth-audit", so it can be addressed as `@name` at the prompt and by steer_subagent / get_subagent_result. Letters, digits, `_` and `-`. Worth setting when several agents of the same type run at once; omit for one-off work. The agent stays reachable by its type either way.',
+          'Optional memorable name for this agent, e.g. "auth-audit", so it can be addressed as `#name` at the prompt and by steer_subagent / get_subagent_result. Letters, digits, `_` and `-`. Worth setting when several agents of the same type run at once; omit for one-off work. The agent stays reachable by its type either way.',
       }),
     ),
     subagent_type: Type.String({

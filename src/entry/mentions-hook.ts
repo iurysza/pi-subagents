@@ -6,6 +6,7 @@ import {
   describeMention,
   handleBase,
   isReservedHandle,
+  MENTION_SIGIL,
   parseMention,
   resolveHandleToType,
   stripAgentPrefix,
@@ -84,7 +85,7 @@ export function registerMentionInputHook(pi: ExtensionAPI, deps: MentionHookDeps
 
     if (resolved?.kind === "live") {
       const record = resolved.record;
-      const target = `@${record.alias ?? record.handle ?? mention.handle}`;
+      const target = `${MENTION_SIGIL}${record.alias ?? record.handle ?? mention.handle}`;
 
       if (record.status === "running" || record.status === "queued") {
         record.resultConsumed = false;
@@ -107,7 +108,7 @@ export function registerMentionInputHook(pi: ExtensionAPI, deps: MentionHookDeps
     }
 
     if (resolved?.kind === "tombstone") {
-      await reviveTombstone(ctx, resolved.entry, mention.message, "Resuming", pauseDeps);
+      await reviveTombstone(ctx, resolved.entry, mention.message, "Resuming", pauseDeps, MENTION_SIGIL);
       return { action: "handled" };
     }
 
@@ -117,7 +118,7 @@ export function registerMentionInputHook(pi: ExtensionAPI, deps: MentionHookDeps
     if (!type) return { action: "continue" };
 
     if (getAgentMentionMode() === "model") {
-      const label = `@${handleBase(type)}`;
+      const label = `${MENTION_SIGIL}${handleBase(type)}`;
       ctx.ui.notify(`Prompting ${label}…`, "info");
       void runMentionClone({ ctx, type, message: mention.message, agentTool: registeredAgentTool })
         .then(async (result) => {
@@ -145,9 +146,9 @@ export function registerMentionInputHook(pi: ExtensionAPI, deps: MentionHookDeps
         isBackground: true,
       });
       await manager.awaitStartup(id);
-      ctx.ui.notify(`Started @${handleBase(type)}`, "info");
+      ctx.ui.notify(`Started ${MENTION_SIGIL}${handleBase(type)}`, "info");
     } catch (err) {
-      ctx.ui.notify(`Could not start @${handleBase(type)}: ${err instanceof Error ? err.message : String(err)}`, "error");
+      ctx.ui.notify(`Could not start ${MENTION_SIGIL}${handleBase(type)}: ${err instanceof Error ? err.message : String(err)}`, "error");
     }
     return { action: "handled" };
   });

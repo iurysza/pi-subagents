@@ -1,5 +1,5 @@
 /**
- * mention.test.ts — the `@handle` grammar.
+ * mention.test.ts — the `#handle` grammar.
  *
  * Both halves are load-bearing in a way that fails silently. A handle that
  * isn't `[\w-]` can never be typed back (the trigger regex would not match it),
@@ -27,7 +27,7 @@ describe("handleBase", () => {
 
   it("always produces something typeable", () => {
     // A type made entirely of stripped characters would otherwise slug to "",
-    // and `@` alone can address nothing.
+    // and `#` alone can address nothing.
     expect(handleBase("!!!")).toBe("agent");
     expect(handleBase("")).toBe("agent");
   });
@@ -44,7 +44,7 @@ describe("handleBase", () => {
 
   it("only ever produces handles the suggestion trigger can match", () => {
     for (const type of ["Explore", "general-purpose", "Code Review!", "!!!", "デバッグ"]) {
-      expect(MENTION_TRIGGER.test(`@${handleBase(type)}`)).toBe(true);
+      expect(MENTION_TRIGGER.test(`#${handleBase(type)}`)).toBe(true);
     }
   });
 });
@@ -63,7 +63,7 @@ describe("assignHandle", () => {
   });
 
   it("never hands out the reserved main handle", () => {
-    // `@main` addresses the main conversation. An agent holding that name
+    // `#main` addresses the main conversation. An agent holding that name
     // would silently swallow the one escape hatch out of the mention grammar.
     expect(assignHandle("main", new Set())).toBe("main-2");
   });
@@ -97,7 +97,7 @@ describe("resolveHandleToType", () => {
   });
 
   it("refuses to resolve the reserved handle, even to a type named for it", () => {
-    // Otherwise `@main do this` would start an agent instead of reaching the
+    // Otherwise `#main do this` would start an agent instead of reaching the
     // main model — and `assignHandle` already denies its instances that name,
     // so resolving the type here would promise something unreachable.
     expect(resolveHandleToType("main", ["main", ...TYPES])).toBeUndefined();
@@ -118,7 +118,7 @@ describe("isReservedHandle", () => {
 });
 
 describe("stripAgentPrefix", () => {
-  it("unwraps Claude Code's manual @agent-<type> spelling", () => {
+  it("unwraps Claude Code's manual #agent-<type> spelling", () => {
     expect(stripAgentPrefix("agent-explore")).toBe("explore");
   });
 
@@ -133,8 +133,8 @@ describe("stripAgentPrefix", () => {
   });
 
   it("only unwraps a prefix at the very start", () => {
-    // `@sub-agent-explore` names an agent called `sub-agent-explore`. Matching
-    // `agent-` anywhere would silently redirect it to `@explore`.
+    // `#sub-agent-explore` names an agent called `sub-agent-explore`. Matching
+    // `agent-` anywhere would silently redirect it to `#explore`.
     expect(stripAgentPrefix("sub-agent-explore")).toBeUndefined();
   });
 });
@@ -157,31 +157,31 @@ describe("describeMention", () => {
 
 describe("parseMention", () => {
   it("splits a leading handle from its message", () => {
-    expect(parseMention("@explore check the RPC path")).toEqual({
+    expect(parseMention("#explore check the RPC path")).toEqual({
       handle: "explore",
       message: "check the RPC path",
     });
   });
 
   it("trims the message and accepts a newline as the separator", () => {
-    expect(parseMention("@explore   spaced   ")).toEqual({ handle: "explore", message: "spaced" });
-    expect(parseMention("@explore\nline1\nline2")).toEqual({ handle: "explore", message: "line1\nline2" });
+    expect(parseMention("#explore   spaced   ")).toEqual({ handle: "explore", message: "spaced" });
+    expect(parseMention("#explore\nline1\nline2")).toEqual({ handle: "explore", message: "line1\nline2" });
   });
 
   it("rejects a bare handle — that belongs to the main model", () => {
-    expect(parseMention("@explore")).toBeNull();
-    expect(parseMention("@explore ")).toBeNull();
-    expect(parseMention("@explore \t ")).toBeNull();
+    expect(parseMention("#explore")).toBeNull();
+    expect(parseMention("#explore ")).toBeNull();
+    expect(parseMention("#explore \t ")).toBeNull();
   });
 
-  it("rejects a leading file path so pi's @-attachment keeps working", () => {
+  it("rejects a leading file path so pi's #-attachment keeps working", () => {
     expect(parseMention("@src/index.ts summarize this")).toBeNull();
     expect(parseMention("@README.md what changed")).toBeNull();
   });
 
   it("rejects a mention that is not at the start of the input", () => {
-    expect(parseMention("hey @explore look at this")).toBeNull();
-    expect(parseMention(" @explore look at this")).toBeNull();
+    expect(parseMention("hey #explore look at this")).toBeNull();
+    expect(parseMention(" #explore look at this")).toBeNull();
   });
 });
 

@@ -409,14 +409,14 @@ export async function showSettings(ctx: ExtensionCommandContext, deps: SettingsM
       {
         id: "agentMentions",
         label: "Agent mentions",
-        description: "Route `@handle message` at the prompt to that agent. model = an off-screen clone of this conversation calls the Agent tool, so the agent gets a context-written prompt, a transcript and per-tool detail, and the chat stays clean; direct = started here from your text, no model call. Messaging and resuming are direct either way.",
+        description: "Route `#handle message` at the prompt to that agent. model = an off-screen clone of this conversation calls the Agent tool, so the agent gets a context-written prompt, a transcript and per-tool detail, and the chat stays clean; direct = started here from your text, no model call. Messaging and resuming are direct either way.",
         currentValue: getAgentMentionMode(),
         values: ["model", "direct", "off"],
       },
       {
         id: "rememberAgents",
         label: "Remember agents",
-        description: "Persist subagent sessions so `@handle` can resume one long after it finished (they also appear in /resume)",
+        description: "Persist subagent sessions so `#handle` can resume one long after it finished (they also appear in /resume)",
         currentValue: getRememberAgents() ? "on" : "off",
         values: ["on", "off"],
       },

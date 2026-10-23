@@ -4,7 +4,7 @@
  *
  * The resume path is pinned in agent-mention-wiring.test.ts ("relays the
  * resumed answer through the ordinary completion notification"). The start path
- * — `@handle msg` naming a type with no live instance — has no equivalent, and
+ * — `#handle msg` naming a type with no live instance — has no equivalent, and
  * it is the path every first mention takes.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -69,7 +69,7 @@ describe("an agent started by a mention", () => {
       failure: undefined,
     } as any);
 
-    await send(lifecycle, "@Explore find the planted bugs in src/");
+    await send(lifecycle, "#Explore find the planted bugs in src/");
     await new Promise(r => setTimeout(r, 500));
 
     expect(pi.sendMessage).toHaveBeenCalledWith(
@@ -94,7 +94,7 @@ describe("an agent started by a mention", () => {
       failure: undefined,
     } as any);
 
-    await send(lifecycle, "@Explore whats your favorite color");
+    await send(lifecycle, "#Explore whats your favorite color");
     await new Promise(r => setTimeout(r, 500));
 
     expect(pi.sendMessage).toHaveBeenCalledWith(
