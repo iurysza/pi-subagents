@@ -14,6 +14,8 @@ import {
 
 export interface AgentCallPayload {
   prompt: string;
+  /** The nested script's name; root calls use the run's `meta.name`. */
+  workflow?: string;
   label?: string;
   model?: string;
   agentType?: string;

@@ -525,6 +525,7 @@ async function agentIn(scope, prompt, opts) {
 
   const result = await callHost("agent", {
     prompt: text,
+    workflow: scope.name,
     label: label,
     model: model,
     agentType: agentType,
