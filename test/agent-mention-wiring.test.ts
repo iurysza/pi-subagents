@@ -567,7 +567,7 @@ describe("an agent file's inherit_context on a mention start (#300)", () => {
     const { lifecycle } = bootDirect({}, memo);
     heldRun(fakeSession());
 
-    await send(lifecycle, "@memo summarize what we did");
+    await send(lifecycle, "#memo summarize what we did");
 
     expect(runAgent).toHaveBeenCalledWith(
       expect.anything(),
@@ -582,7 +582,7 @@ describe("an agent file's inherit_context on a mention start (#300)", () => {
     heldRun(fakeSession());
     vi.mocked(runMentionClone).mockResolvedValue({ spawned: false, error: "no session file" });
 
-    await send(lifecycle, "@memo summarize what we did");
+    await send(lifecycle, "#memo summarize what we did");
     await flush();
 
     expect(runAgent).toHaveBeenCalledWith(
@@ -600,7 +600,7 @@ describe("an agent file's inherit_context on a mention start (#300)", () => {
     heldRun(fakeSession());
     writeFileSync(join(process.cwd(), ".pi", "agents", "memo.md"), memo.memo);
 
-    await send(lifecycle, "@memo summarize what we did");
+    await send(lifecycle, "#memo summarize what we did");
 
     expect(runAgent).toHaveBeenCalledWith(
       expect.anything(),
@@ -614,7 +614,7 @@ describe("an agent file's inherit_context on a mention start (#300)", () => {
     const { lifecycle } = bootDirect();
     heldRun(fakeSession());
 
-    await send(lifecycle, "@explore go");
+    await send(lifecycle, "#explore go");
 
     expect((vi.mocked(runAgent).mock.calls[0][3] as any).inheritContext).toBeUndefined();
   });
@@ -1363,13 +1363,13 @@ describe("resuming an evicted agent by name", () => {
 
     const uiCtx = ctx();
     await lifecycle.get("input")(
-      { type: "input", text: "@explore anything else?", source: "interactive" },
+      { type: "input", text: "#explore anything else?", source: "interactive" },
       uiCtx,
     );
 
     expect(vi.mocked(runAgent)).not.toHaveBeenCalled();
     expect(uiCtx.ui.notify).toHaveBeenCalledWith(
-      "Could not resume @explore — its worktree no longer exists.", "warning",
+      "Could not resume #explore — its worktree no longer exists.", "warning",
     );
   });
 
