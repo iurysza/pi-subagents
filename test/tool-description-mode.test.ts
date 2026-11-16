@@ -3,7 +3,7 @@
 // with a mock pi (same pattern as print-mode.test.ts) inside a temp cwd, then
 // inspects the registered Agent tool's description.
 
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -463,6 +463,58 @@ describe("toolDescriptionMode", () => {
       const desc: string = tools.get("Agent").description;
       expect(desc).toContain("- mcponly: mcponly agent. (Tools: mcp__radius__*, mcp__github__search)");
       expect(desc).not.toContain("- mcponly: mcponly agent. (Tools: no built-ins, extension tools only)");
+    });
+  });
+  describe("workflowToolDescriptionMode", () => {
+    it("defaults to the full workflow description", () => {
+      const tools = setup();
+      const desc: string = tools.get("SubagentWorkflow").description;
+      expect(desc).toContain("Script body hooks:");
+      expect(desc).toContain("## Resume");
+    });
+
+    it("compact swaps in the short description and names the shipped guide", () => {
+      const full: string = setup().get("SubagentWorkflow").description;
+      const tools = setup({ workflowToolDescriptionMode: "compact" });
+      const desc: string = tools.get("SubagentWorkflow").description;
+      expect(desc).not.toContain("Script body hooks:");
+      expect(desc).not.toContain("## Resume");
+      // The point of the feature: a fraction of the full text.
+      expect(desc.length).toBeLessThan(full.length / 4);
+      // The guide it sends the model to is a real file with the section it names.
+      const guide = desc.match(/Read (\S+workflows\.md)/)?.[1];
+      expect(guide).toBeDefined();
+      expect(existsSync(guide as string)).toBe(true);
+      expect(readFileSync(guide as string, "utf-8")).toContain("## Writing the script yourself");
+      expect(desc).not.toMatch(/\{\{\w+\}\}/);
+    });
+
+    it("compact keeps the rules that decide whether and how to call the tool", () => {
+      const tools = setup({ workflowToolDescriptionMode: "compact" });
+      const desc: string = tools.get("SubagentWorkflow").description;
+      for (const contract of [
+        "ONLY call this tool when the user has explicitly opted into",
+        "export const meta",
+        "pure literal",
+        "not TypeScript",
+        "Date.now()",
+        "null",
+        "Prefer pipeline()",
+        "scriptPath",
+        "- general-purpose:",
+      ]) {
+        expect(desc).toContain(contract);
+      }
+    });
+
+    it("an invalid mode in the settings file is dropped: full description", () => {
+      const tools = setup({ workflowToolDescriptionMode: "tiny" });
+      expect(tools.get("SubagentWorkflow").description).toContain("Script body hooks:");
+    });
+
+    it("is independent of the Agent tool's mode", () => {
+      const tools = setup({ toolDescriptionMode: "compact" });
+      expect(tools.get("SubagentWorkflow").description).toContain("Script body hooks:");
     });
   });
 });

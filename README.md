@@ -821,6 +821,8 @@ The match is on the exact tool names `Workflow` (Claude Code's) and `SubagentWor
 
 **Tool description** (`toolDescriptionMode`, default `"full"`): which Agent tool description the LLM sees. `"full"` is the rich Claude Code-style prompt (~1,400 tokens with the default agents); `"compact"` is ~75% smaller — one-line agent type list, terse usage notes — for small/local models where tool-spec tokens are expensive. Per-option details stay in the parameter descriptions in every mode (the parameter schema is never customizable). Applies on the next pi session.
 
+**Workflow tool description** (`workflowToolDescriptionMode`, default `"full"`): which `SubagentWorkflow` tool description the LLM sees. `"full"` is the complete script reference, about 20,000 characters in every request. `"compact"` is about 2,000: it keeps the opt-in rule and the rules scripts break most often, and tells the model to read the shipped `docs/workflows.md` before it writes a script. Set it in `subagents.json`; it is read at startup, so a change applies on the next pi session.
+
 `"custom"` registers your own description from `<cwd>/.pi/agent-tool-description.md` (project) or `<agentDir>/agent-tool-description.md` (global; project wins). The file is read once at tool registration, so edits also apply on the next pi session. Dynamic parts stay live via placeholders — a static agent list would go stale the moment you add a custom agent:
 
 ```markdown

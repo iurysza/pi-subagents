@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineTool, type ExtensionAPI, type ExtensionContext, getAgentDir } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
@@ -9,6 +10,7 @@ import type { CompletionOutbox } from "../completion-outbox.js";
 import { textResult, WORKFLOW_FILE_FLAG } from "../entry/renderers.js";
 import { sessionTaskDir } from "../output-file.js";
 import type { PausedWorkflowEntry } from "../pause-store.js";
+import type { WorkflowToolDescriptionMode } from "../settings.js";
 import type { AgentActivity, AgentWidget } from "../ui/agent-widget.js";
 import type { FleetList, FleetWorkflow } from "../ui/fleet-list.js";
 import { renderWorkflowCard } from "../ui/workflow-card.js";
@@ -31,7 +33,7 @@ import {
   workflowResultText,
   workflowRunId,
 } from "../workflow/task.js";
-import { fullWorkflowToolDescription } from "../workflow/tool-description.js";
+import { compactWorkflowToolDescription, fullWorkflowToolDescription } from "../workflow/tool-description.js";
 import { buildCompactTypeListText, buildTypeListText } from "./agent-tool-schema.js";
 
 export interface WorkflowToolDeps {
@@ -47,7 +49,12 @@ export interface WorkflowToolDeps {
   setWorkflowsDisabledByCollision: () => void;
   isWorktreeIsolationEnabled: () => boolean;
   isSchedulingEnabled: () => boolean;
+  /** Read once, when the tool is created. Omitted means "full". */
+  getWorkflowToolDescriptionMode?: () => WorkflowToolDescriptionMode;
 }
+
+/** The guide the compact description sends the model to. Ships with the package, beside `src`/`dist`. */
+export const WORKFLOW_GUIDE_PATH = fileURLToPath(new URL("../../docs/workflows.md", import.meta.url));
 
 export function fleetWorkflows(workflowTasks: Map<string, WorkflowTask>): FleetWorkflow[] {
   return [...workflowTasks.values()].map(task => ({
@@ -214,6 +221,7 @@ export function createWorkflowTool(deps: WorkflowToolDeps) {
       agentDir: getAgentDir,
       isolationGuideline: () => isolationGuideline,
       scheduleGuideline: () => scheduleGuideline,
+      workflowGuide: () => WORKFLOW_GUIDE_PATH,
     };
     return template.replace(/\{\{(\w+)\}\}/g, (raw, name: string) => {
       if (vars[name]) return vars[name]();
@@ -225,7 +233,9 @@ export function createWorkflowTool(deps: WorkflowToolDeps) {
   return defineTool({
     name: SUBAGENT_TOOL_NAMES.WORKFLOW,
     label: "SubagentWorkflow",
-    description: renderToolDescriptionTemplate(fullWorkflowToolDescription),
+    description: renderToolDescriptionTemplate(
+      deps.getWorkflowToolDescriptionMode?.() === "compact" ? compactWorkflowToolDescription : fullWorkflowToolDescription,
+    ),
     promptSnippet: "Run a deterministic script that orchestrates many subagents",
     promptGuidelines: [
       "Use SubagentWorkflow when the number of agents depends on something discovered at runtime, when work flows through stages, or when findings should be independently verified. Use Agent for one delegated task or a handful you can name up front.",

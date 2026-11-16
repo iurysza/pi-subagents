@@ -121,6 +121,15 @@ export interface SubagentsSettings {
    */
   toolDescriptionMode?: ToolDescriptionMode;
   /**
+   * Which SubagentWorkflow tool description the LLM sees. "full" (default) is
+   * the complete reference, about 8,500 tokens in every request; "compact"
+   * keeps the opt-in rule and the rules scripts break most often, and points
+   * the model at the shipped `docs/workflows.md` to read before it writes a
+   * script. Read once at tool registration: a change applies on the next pi
+   * session.
+   */
+  workflowToolDescriptionMode?: WorkflowToolDescriptionMode;
+  /**
    * Whether the Claude Code-style FleetView (the navigable main+subagents list
    * rendered below the editor) is shown. Defaults to `true`. Pure-UI: when off,
    * the list never registers and the global key handler never captures input.
@@ -349,6 +358,7 @@ export interface SubagentsSettings {
 }
 
 export type ToolDescriptionMode = "full" | "compact" | "custom";
+export type WorkflowToolDescriptionMode = "full" | "compact";
 
 /** Setter hooks used by applySettings to wire persisted values into in-memory state. */
 export interface SettingsAppliers {
@@ -386,6 +396,7 @@ export type SettingsEmit = (event: string, payload: unknown) => void;
 
 const VALID_JOIN_MODES: ReadonlySet<string> = new Set<JoinMode>(["async", "group", "smart"]);
 const VALID_TOOL_DESCRIPTION_MODES: ReadonlySet<string> = new Set<ToolDescriptionMode>(["full", "compact", "custom"]);
+const VALID_WORKFLOW_TOOL_DESCRIPTION_MODES: ReadonlySet<string> = new Set<WorkflowToolDescriptionMode>(["full", "compact"]);
 const VALID_WIDGET_MODES: ReadonlySet<string> = new Set<WidgetMode>(["all", "background", "off"]);
 const VALID_AGENT_MENTION_MODES: ReadonlySet<string> = new Set<AgentMentionMode>(["model", "direct", "off"]);
 const VALID_UI_STYLES: ReadonlySet<string> = new Set<UIStyle>(["pi", "claude"]);
@@ -480,6 +491,12 @@ function sanitize(raw: unknown): SubagentsSettings {
   }
   if (typeof r.toolDescriptionMode === "string" && VALID_TOOL_DESCRIPTION_MODES.has(r.toolDescriptionMode)) {
     out.toolDescriptionMode = r.toolDescriptionMode as ToolDescriptionMode;
+  }
+  if (
+    typeof r.workflowToolDescriptionMode === "string" &&
+    VALID_WORKFLOW_TOOL_DESCRIPTION_MODES.has(r.workflowToolDescriptionMode)
+  ) {
+    out.workflowToolDescriptionMode = r.workflowToolDescriptionMode as WorkflowToolDescriptionMode;
   }
   if (typeof r.fleetView === "boolean") {
     out.fleetView = r.fleetView;
