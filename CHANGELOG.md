@@ -9,6 +9,10 @@ check the entries below for behaviour changes.
 
 ## [Unreleased]
 
+### Added
+
+- **`workflowToolDescriptionMode` setting: opt-in compact `SubagentWorkflow` description.** The full description is about 20,000 characters in every request of every session, whether a workflow runs or not. `"compact"` (about 2,000) keeps the opt-in rule and the rules scripts break most often, and points the model at the shipped `docs/workflows.md` to read before it writes a script. Default stays `"full"`.
+
 ### Fixed
 - **A package's name alias covers directory-style `pi.extensions` declarations** (ported from [tintinweb/pi-subagents#426](https://github.com/tintinweb/pi-subagents/pull/426) — thanks [@LuLuyu](https://github.com/LuLuyu)). A declaration such as `"./dist"` only produced the package alias when the loader registered exactly that directory; loaded from a file inside it — `extensions: ["…/dist/index.js"]`, a symlink to that file, or pi resolving the directory to its index — `extensions: [pkg-name]` and `ext: pkg-name` matched nothing, leaving only the path-derived name. Every file under a declared directory now answers to the package alias too; path-derived names keep working, and the separator in the prefix test keeps `dist-v2` from matching `"./dist"`.
 

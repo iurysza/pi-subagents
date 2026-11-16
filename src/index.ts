@@ -375,6 +375,8 @@ export default function (pi: ExtensionAPI) {
   let toolDescriptionMode: ToolDescriptionMode = "full";
   function getToolDescriptionMode(): ToolDescriptionMode { return toolDescriptionMode; }
   function setToolDescriptionMode(mode: ToolDescriptionMode): void { toolDescriptionMode = mode; }
+  // Read once: the workflow tool is created with it, so a change needs a new session.
+  const getWorkflowToolDescriptionMode = () => bootSettings.workflowToolDescriptionMode;
 
   function registerTurnGroup() {
     const ids = turnGroupSpawns;
@@ -500,6 +502,7 @@ export default function (pi: ExtensionAPI) {
     },
     isWorktreeIsolationEnabled,
     isSchedulingEnabled,
+    getWorkflowToolDescriptionMode: () => getWorkflowToolDescriptionMode() ?? "full",
   });
 
   if (isWorkflowsEnabled()) pi.registerTool(workflowTool);
@@ -565,6 +568,7 @@ export default function (pi: ExtensionAPI) {
     setDisableDefaultAgents,
     getToolDescriptionMode,
     setToolDescriptionMode,
+    getWorkflowToolDescriptionMode,
     getWidgetMode,
     setWidgetMode,
   };

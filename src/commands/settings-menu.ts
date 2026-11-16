@@ -48,6 +48,7 @@ import {
   type SubagentsSettings,
   saveAndEmitChanged,
   type ToolDescriptionMode,
+  type WorkflowToolDescriptionMode,
 } from "../settings.js";
 import type {
   AgentMentionMode,
@@ -98,6 +99,8 @@ export interface SettingsMenuDeps {
   setDisableDefaultAgents: (b: boolean) => void;
   getToolDescriptionMode: () => ToolDescriptionMode;
   setToolDescriptionMode: (m: ToolDescriptionMode) => void;
+  /** As loaded at startup; undefined when no settings file sets it. Not editable from the menu. */
+  getWorkflowToolDescriptionMode: () => WorkflowToolDescriptionMode | undefined;
   getWidgetMode: () => WidgetMode;
   setWidgetMode: (m: WidgetMode) => void;
 }
@@ -115,6 +118,7 @@ export function snapshotSettings(deps: SettingsMenuDeps) {
     strictAgentFiles: deps.getStrictAgentFiles(),
     disableDefaultAgents: isDefaultsDisabled(),
     toolDescriptionMode: deps.getToolDescriptionMode(),
+    workflowToolDescriptionMode: deps.getWorkflowToolDescriptionMode(),
     fleetView: deps.isFleetViewEnabled(),
     agentMentions: deps.getAgentMentionMode(),
     rememberAgents: getRememberAgents(),

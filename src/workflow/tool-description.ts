@@ -206,3 +206,27 @@ Use this tool for multi-step orchestration where control flow should be determin
 ## Resume
 
 The tool result includes a runId. To resume after a pause, kill, or script edit, relaunch with SubagentWorkflow({scriptPath, resumeFromRunId}) — the longest unchanged prefix of agent() calls returns cached results instantly; the first edited/new call and everything after it runs live. Same script + same args — usually, but not always, a full cache hit: calls are numbered in the order they arrive, so a pipeline() that interleaves differently the second time takes a cache miss from that point on, and a journal that carries an agent({ resume }) call declines the whole cache. A miss costs tokens, never correctness — a call that does not match its journal entry runs live instead of being handed another agent's answer. It is a prefix and not a lookup: a later call that still matches is not reused once an earlier one has changed. A journaled failure ends the prefix, so resuming a run that died at agent 5 retries exactly agent 5. Same session only, and the run must have finished — stop it from /agents → Workflows first. Before diagnosing why a completed workflow returned an empty or unexpected result, Read the run's \`<run id>.workflow.jsonl\` beside its script — it records each agent's actual return value; do not assume cached results are non-empty. Date.now()/Math.random()/new Date() are unavailable in scripts (they would break this) — stamp results after the workflow returns, or pass timestamps via args.`;
+
+/**
+ * The short description, for `workflowToolDescriptionMode: "compact"`. The full
+ * text above costs about 8,500 tokens in every request of every session, used
+ * or not. This one keeps what decides *whether* to call the tool (the opt-in
+ * rule) and the few rules a script breaks most often, and sends the model to
+ * the shipped guide for the rest, so a session only pays for the reference
+ * when it writes a workflow. `{{workflowGuide}}` is the guide's absolute path.
+ */
+export const compactWorkflowToolDescription = `Execute a workflow script that orchestrates multiple subagents deterministically. Workflows run in the background: this tool returns immediately with a task ID, and you are notified when the workflow completes. Do not poll or sleep waiting for it.
+
+ONLY call this tool when the user has explicitly opted into multi-agent orchestration: they asked for a workflow or multi-agent orchestration in their own words ("use a workflow", "fan out agents"), invoked a skill or slash command whose instructions tell you to call SubagentWorkflow, or asked for a specific named or saved workflow. A task that would merely benefit from one does not count. Otherwise use the Agent tool, or describe what a workflow could do and roughly what it would cost, and ask.
+
+Before you write or edit a script, Read {{workflowGuide}} from "## Writing the script yourself" to the end: it is the reference for every option, limit, pattern and the resume rules. Do not write a script from memory.
+
+The rules scripts break most often:
+- The script must begin with \`export const meta = { name, description }\`, a pure literal (no variables, calls, spreads or interpolation). Optional: \`phases\`, \`whenToUse\`.
+- The body is plain JavaScript, not TypeScript, in an async context. Globals: agent(prompt, opts?), pipeline(items, ...stages), parallel(thunks), workflow(nameOrRef, args?), phase(title), log(message), args, budget. No filesystem or Node.js APIs. Date.now(), Math.random(), argless new Date(), eval and Function throw.
+- agent() resolves to the child's final text, or to a validated object with \`schema\`, and to null when the child fails or is skipped: filter nulls after every stage.
+- Prefer pipeline() over parallel(): parallel() is a barrier that waits for every thunk.
+- Pass the script inline via \`script\`. To re-run an edited one, pass \`scriptPath\` with the path the tool result names. A saved workflow runs by \`name\`.
+
+Available agent types for agent()'s agentType option:
+{{compactTypeList}}`;
